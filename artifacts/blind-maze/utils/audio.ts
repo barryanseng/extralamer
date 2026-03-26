@@ -88,7 +88,7 @@ export async function stopSpeaking() {
 
 export const AUDIO = {
   welcome:
-    "Welcome to Blind Maze. A game designed for all abilities. Swipe up, down, left, or right anywhere on the screen to move. To return to the main menu at any time, hold the bottom right corner of the screen for one second. Select a difficulty to begin.",
+    "Welcome to Blind Maze. A game designed for all abilities. Swipe up, down, left, or right anywhere on the screen to move. To return to the main menu at any time, hold the bottom right corner of the screen for one second. Three difficulties are available: Easy, Medium, and Hard. Tap a button to begin.",
   easySelected: "Easy selected. Four mazes, short paths.",
   mediumSelected: "Medium selected. Three mazes, moderate paths.",
   hardSelected: "Hard selected. Three mazes, longer paths.",

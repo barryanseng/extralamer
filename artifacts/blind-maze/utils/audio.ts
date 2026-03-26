@@ -64,20 +64,33 @@ export async function stopSpeaking() {
 }
 
 export const AUDIO = {
-  welcome: "Welcome to Blind Maze. A game for all abilities. Swipe anywhere on the screen to move. Swipe up, down, left, or right. To return to the main menu, hold the bottom right corner for one second. Choose your difficulty below.",
-  selectEasy: "Easy mode selected. 4 mazes, around 5 to 10 moves each.",
-  selectMedium: "Medium mode selected. 3 mazes, around 10 to 15 moves each.",
-  selectHard: "Hard mode selected. 3 mazes, around 15 to 20 moves each.",
+  welcome:
+    "Welcome to Blind Maze. A game designed for all abilities. Swipe up, down, left, or right anywhere on the screen to move. To return to the main menu at any time, hold the bottom right corner of the screen for one second. Select a difficulty to begin.",
+  easySelected: "Easy selected. Four mazes, short paths.",
+  mediumSelected: "Medium selected. Three mazes, moderate paths.",
+  hardSelected: "Hard selected. Three mazes, longer paths.",
+  easyButton: "Easy mode. Beginner friendly.",
+  mediumButton: "Medium mode. Some twists.",
+  hardButton: "Hard mode. Full spiral paths.",
   gameStart: (mazeName: string, moveTarget: number) =>
     `${mazeName}. Find the exit in about ${moveTarget} moves. Swipe to move.`,
-  moved: (direction: string) => `Moved ${direction}`,
-  blocked: (direction: string) => `Wall to the ${direction}`,
-  won: (moves: number) => `Congratulations! You found the exit in ${moves} moves! Amazing!`,
-  nextMaze: (mazeName: string) => `Next maze: ${mazeName}. Swipe to move.`,
-  allDone: "You completed all mazes in this difficulty! Return to the menu to try a harder level.",
+  moved: (direction: string, openDirs: string[]) => {
+    const dirStr = direction;
+    if (openDirs.length === 0) {
+      return `Moved ${dirStr}. Dead end. No exits.`;
+    }
+    if (openDirs.length === 1) {
+      return `Moved ${dirStr}. One way open: ${openDirs[0]}.`;
+    }
+    return `Moved ${dirStr}.`;
+  },
+  blocked: (direction: string) => `Wall to the ${direction}.`,
+  deadEnd: "Dead end. Blocked on all sides.",
+  won: (moves: number) =>
+    `You found the exit in ${moves} moves. Excellent!`,
+  nextMaze: (mazeName: string) =>
+    `Well done! Next maze: ${mazeName}. Swipe to move.`,
+  allDone:
+    "You completed all mazes in this difficulty. Return to the menu to try a harder level.",
   returnMenu: "Returning to main menu.",
-  easyButton: "Easy",
-  mediumButton: "Medium",
-  hardButton: "Hard",
-  instructions: "Hold bottom right to exit to menu.",
 };

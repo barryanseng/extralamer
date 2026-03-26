@@ -12,16 +12,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  AUDIO,
-  speak,
-  stopSpeaking,
-} from "@/utils/audio";
+import { AUDIO, speak, stopSpeaking } from "@/utils/audio";
 import { hapticMove, hapticWall, hapticWin } from "@/utils/haptics";
 import {
+  bfsSolve,
   canMove,
+  getOpenDirections,
   getMazesByDifficulty,
   isAtExit,
+  isDeadEnd,
   MazeData,
   movePlayer,
   type Cell,
@@ -33,9 +32,11 @@ const SWIPE_THRESHOLD = 30;
 const BOTTOM_RIGHT_ZONE = 100;
 const HOLD_DURATION = 1000;
 
+type Direction = "up" | "down" | "left" | "right";
+
 export default function GameScreen() {
-  const params = useLocalSearchParams<{ difficulty: "easy" | "medium" | "hard" }>();
-  const difficulty = params.difficulty ?? "easy";
+  const params = useLocalSearchParams<{ difficulty: string }>();
+  const difficulty = (params.difficulty ?? "easy") as "easy" | "medium" | "hard";
   const insets = useSafeAreaInsets();
 
   const mazes = getMazesByDifficulty(difficulty);
@@ -44,30 +45,41 @@ export default function GameScreen() {
   const [moveCount, setMoveCount] = useState<number>(0);
   const [won, setWon] = useState<boolean>(false);
   const [allDone, setAllDone] = useState<boolean>(false);
+  const [overlayDisplayText, setOverlayDisplayText] = useState<string>("");
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const overlayText = useRef<string>("");
   const overlayTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const holdStart = useRef<{ x: number; y: number } | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const hasSwiped = useRef(false);
+
+  const wonRef = useRef(false);
+  const allDoneRef = useRef(false);
+  const mazeIndexRef = useRef(0);
+  const moveCountRef = useRef(0);
+  const positionRef = useRef<Cell>(mazes[0].start);
+
+  useEffect(() => { wonRef.current = won; }, [won]);
+  useEffect(() => { allDoneRef.current = allDone; }, [allDone]);
+  useEffect(() => { mazeIndexRef.current = mazeIndex; }, [mazeIndex]);
+  useEffect(() => { moveCountRef.current = moveCount; }, [moveCount]);
+  useEffect(() => { positionRef.current = position; }, [position]);
 
   const currentMaze: MazeData = mazes[mazeIndex];
 
   function showOverlay(text: string) {
-    overlayText.current = text;
+    setOverlayDisplayText(text);
     if (overlayTimeout.current) clearTimeout(overlayTimeout.current);
     overlayOpacity.setValue(1);
     overlayTimeout.current = setTimeout(() => {
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
+        duration: 700,
+        useNativeDriver: false,
         easing: Easing.out(Easing.ease),
       }).start();
-    }, 1400);
+    }, 1200);
   }
 
   const goToMenu = useCallback(async () => {
@@ -77,64 +89,95 @@ export default function GameScreen() {
   }, []);
 
   const isInBottomRight = (x: number, y: number): boolean => {
-    const screenH = Platform.OS === "web" ? SCREEN_HEIGHT : SCREEN_HEIGHT;
-    const screenW = Platform.OS === "web" ? SCREEN_WIDTH : SCREEN_WIDTH;
-    return x > screenW - BOTTOM_RIGHT_ZONE && y > screenH - BOTTOM_RIGHT_ZONE;
+    return (
+      x > SCREEN_WIDTH - BOTTOM_RIGHT_ZONE &&
+      y > SCREEN_HEIGHT - BOTTOM_RIGHT_ZONE
+    );
   };
 
   const handleWin = useCallback(
     async (moves: number) => {
+      wonRef.current = true;
       setWon(true);
       await hapticWin();
-      const msg = AUDIO.won(moves);
-      speak(msg, true);
-      showOverlay("You found the exit!");
+      speak(AUDIO.won(moves), true);
+      showOverlay("Exit Found!");
 
       setTimeout(async () => {
-        if (mazeIndex + 1 < mazes.length) {
-          const nextMaze = mazes[mazeIndex + 1];
-          setMazeIndex(mazeIndex + 1);
+        const currentIndex = mazeIndexRef.current;
+        if (currentIndex + 1 < mazes.length) {
+          const nextMaze = mazes[currentIndex + 1];
+          const nextIndex = currentIndex + 1;
+          setMazeIndex(nextIndex);
           setPosition(nextMaze.start);
           setMoveCount(0);
           setWon(false);
-          speak(AUDIO.nextMaze(nextMaze.name));
+          wonRef.current = false;
+          mazeIndexRef.current = nextIndex;
+          moveCountRef.current = 0;
+          positionRef.current = nextMaze.start;
+          speak(AUDIO.nextMaze(nextMaze.name), true);
+          showOverlay(nextMaze.name);
         } else {
+          allDoneRef.current = true;
           setAllDone(true);
           speak(AUDIO.allDone, true);
+          showOverlay("All Done!");
         }
-      }, 2500);
+      }, 2800);
     },
-    [mazeIndex, mazes]
+    [mazes]
   );
 
   const handleMove = useCallback(
-    async (direction: "up" | "down" | "left" | "right") => {
-      if (won || allDone) return;
+    (direction: Direction) => {
+      if (wonRef.current || allDoneRef.current) return;
 
-      setPosition((prev) => {
-        const maze = mazes[mazeIndex];
-        if (canMove(maze, prev, direction)) {
-          const next = movePlayer(prev, direction);
-          const newMoveCount = moveCount + 1;
-          setMoveCount(newMoveCount);
-          hapticMove();
-          speak(AUDIO.moved(direction));
+      const maze = mazes[mazeIndexRef.current];
+      const prev = positionRef.current;
+
+      if (canMove(maze, prev, direction)) {
+        const next = movePlayer(prev, direction);
+        const newMoveCount = moveCountRef.current + 1;
+
+        setPosition(next);
+        setMoveCount(newMoveCount);
+        positionRef.current = next;
+        moveCountRef.current = newMoveCount;
+
+        hapticMove();
+
+        if (isAtExit(next, maze.exit)) {
           showOverlay(direction.toUpperCase());
-
-          if (isAtExit(next, maze.exit)) {
-            setTimeout(() => handleWin(newMoveCount), 100);
-          }
-          return next;
-        } else {
-          hapticWall();
-          speak(AUDIO.blocked(direction));
-          showOverlay(`Wall ${direction}`);
-          return prev;
+          speak(`Moved ${direction}.`, true);
+          setTimeout(() => handleWin(newMoveCount), 200);
+          return;
         }
-      });
+
+        const openDirs = getOpenDirections(maze, next);
+        const audioMsg = AUDIO.moved(direction, openDirs);
+        speak(audioMsg, true);
+
+        if (isDeadEnd(maze, next)) {
+          showOverlay("Dead End");
+          hapticWall();
+          speak(AUDIO.deadEnd);
+        } else {
+          showOverlay(direction.toUpperCase());
+        }
+      } else {
+        hapticWall();
+        speak(AUDIO.blocked(direction), true);
+        showOverlay(`Wall ${direction}`);
+      }
     },
-    [won, allDone, mazeIndex, mazes, moveCount, handleWin]
+    [mazes, handleWin]
   );
+
+  const handleMoveRef = useRef(handleMove);
+  useEffect(() => {
+    handleMoveRef.current = handleMove;
+  }, [handleMove]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -147,16 +190,14 @@ export default function GameScreen() {
         hasSwiped.current = false;
 
         if (isInBottomRight(pageX, pageY)) {
-          holdStart.current = { x: pageX, y: pageY };
           holdTimer.current = setTimeout(() => {
             goToMenu();
           }, HOLD_DURATION);
         }
       },
 
-      onPanResponderMove: (e, gestureState) => {
+      onPanResponderMove: (_, gestureState) => {
         if (hasSwiped.current) return;
-
         if (holdTimer.current) {
           const dx = Math.abs(gestureState.dx);
           const dy = Math.abs(gestureState.dy);
@@ -172,7 +213,6 @@ export default function GameScreen() {
           clearTimeout(holdTimer.current);
           holdTimer.current = null;
         }
-
         if (hasSwiped.current) return;
 
         const { dx, dy } = gestureState;
@@ -182,7 +222,6 @@ export default function GameScreen() {
         if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) return;
 
         hasSwiped.current = true;
-
         if (absDx > absDy) {
           handleMoveRef.current(dx > 0 ? "right" : "left");
         } else {
@@ -199,10 +238,13 @@ export default function GameScreen() {
     })
   ).current;
 
-  const handleMoveRef = useRef(handleMove);
   useEffect(() => {
-    handleMoveRef.current = handleMove;
-  }, [handleMove]);
+    const maze = mazes[mazeIndex];
+    const optimalMoves = bfsSolve(maze) ?? maze.minMoves;
+    const msg = AUDIO.gameStart(maze.name, optimalMoves);
+    speak(msg, true);
+    showOverlay(maze.name);
+  }, [mazeIndex]);
 
   useEffect(() => {
     return () => {
@@ -212,26 +254,12 @@ export default function GameScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    const maze = mazes[mazeIndex];
-    const msg = AUDIO.gameStart(maze.name, maze.minMoves);
-    speak(msg, true);
-    showOverlay(maze.name);
-  }, [mazeIndex]);
-
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   return (
     <View style={styles.fullScreen} {...panResponder.panHandlers}>
-      <View
-        style={[
-          styles.header,
-          {
-            top: topPad + 8,
-          },
-        ]}
-      >
+      <View style={[styles.header, { top: topPad + 8 }]}>
         <Text style={styles.mazeName}>{currentMaze.name}</Text>
         <Text style={styles.moveCount}>Moves: {moveCount}</Text>
       </View>
@@ -240,14 +268,14 @@ export default function GameScreen() {
         pointerEvents="none"
         style={[styles.overlayContainer, { opacity: overlayOpacity }]}
       >
-        <Text style={styles.overlayText}>{overlayText.current}</Text>
+        <Text style={styles.overlayText}>{overlayDisplayText}</Text>
       </Animated.View>
 
       {allDone && (
         <View style={styles.allDoneContainer}>
-          <Text style={styles.allDoneTitle}>All Done!</Text>
+          <Text style={styles.allDoneTitle}>Complete!</Text>
           <Text style={styles.allDoneText}>
-            You conquered all {difficulty} mazes.{"\n"}Hold the bottom-right corner to go back.
+            All {difficulty} mazes solved.{"\n"}Hold the bottom-right corner to go back.
           </Text>
         </View>
       )}
@@ -255,10 +283,7 @@ export default function GameScreen() {
       <View
         style={[
           styles.bottomRightZone,
-          {
-            bottom: bottomPad + 12,
-            right: 16,
-          },
+          { bottom: bottomPad + 12, right: 16 },
         ]}
       >
         <Text style={styles.bottomRightHint}>hold</Text>
@@ -300,7 +325,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 20,
-    pointerEvents: "none",
   },
   overlayText: {
     color: "#FFFFFF",
@@ -325,7 +349,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   allDoneText: {
-    color: "#444",
+    color: "#333",
     fontSize: 16,
     fontFamily: "Inter_400Regular",
     textAlign: "center",

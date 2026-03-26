@@ -17,14 +17,14 @@ type Difficulty = "easy" | "medium" | "hard";
 
 function DifficultyButton({
   label,
+  audioLabel,
   difficulty,
   onSelect,
-  delay,
 }: {
   label: string;
+  audioLabel: string;
   difficulty: Difficulty;
   onSelect: (d: Difficulty) => void;
-  delay: number;
 }) {
   const pressAnim = useRef(new Animated.Value(1)).current;
 
@@ -34,6 +34,7 @@ function DifficultyButton({
   };
 
   const handlePressIn = () => {
+    speak(audioLabel, true);
     Animated.spring(pressAnim, {
       toValue: 0.95,
       useNativeDriver: false,
@@ -66,7 +67,7 @@ function DifficultyButton({
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      accessibilityLabel={label}
+      accessibilityLabel={audioLabel}
       accessibilityRole="button"
       testID={`difficulty-${difficulty}`}
       style={{ width: "100%" }}
@@ -98,20 +99,20 @@ export default function MenuScreen() {
       hasSpoken.current = true;
       const timeout = setTimeout(() => {
         speak(AUDIO.welcome);
-      }, 500);
+      }, 600);
       return () => clearTimeout(timeout);
     }
   }, []);
 
   const handleSelect = async (difficulty: Difficulty) => {
     await stopSpeaking();
-    if (difficulty === "easy") speak(AUDIO.selectEasy);
-    else if (difficulty === "medium") speak(AUDIO.selectMedium);
-    else speak(AUDIO.selectHard);
+    if (difficulty === "easy") speak(AUDIO.easySelected, true);
+    else if (difficulty === "medium") speak(AUDIO.mediumSelected, true);
+    else speak(AUDIO.hardSelected, true);
 
     setTimeout(() => {
       router.push({ pathname: "/game", params: { difficulty } });
-    }, 800);
+    }, 900);
   };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top + 20;
@@ -136,27 +137,27 @@ export default function MenuScreen() {
       <View style={styles.buttonsContainer}>
         <DifficultyButton
           label="EASY"
+          audioLabel={AUDIO.easyButton}
           difficulty="easy"
           onSelect={handleSelect}
-          delay={0}
         />
         <DifficultyButton
           label="MEDIUM"
+          audioLabel={AUDIO.mediumButton}
           difficulty="medium"
           onSelect={handleSelect}
-          delay={0}
         />
         <DifficultyButton
           label="HARD"
+          audioLabel={AUDIO.hardButton}
           difficulty="hard"
           onSelect={handleSelect}
-          delay={0}
         />
       </View>
 
       <View style={{ alignItems: "center" }}>
-        <Text style={styles.hint}>Swipe anywhere on the game screen to move</Text>
-        <Text style={styles.hintSub}>Hold bottom-right corner to return to menu</Text>
+        <Text style={styles.hint}>Swipe anywhere to move</Text>
+        <Text style={styles.hintSub}>Hold bottom-right to return to menu</Text>
       </View>
     </View>
   );

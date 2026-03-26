@@ -109,7 +109,7 @@ export default function MenuScreen() {
       <Animated.View
         style={[styles.overlay, { opacity: instructionOpacity, pointerEvents: "none" }]}
       >
-        <Text style={styles.instructionTitle}>BLIND MAZE</Text>
+        <Text style={styles.instructionTitle}>WAYFINDER</Text>
         <Text style={styles.instructionLine}>Tap top for Easy</Text>
         <Text style={styles.instructionLine}>Tap middle for Medium</Text>
         <Text style={styles.instructionLine}>Tap bottom for Hard</Text>

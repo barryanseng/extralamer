@@ -97,17 +97,10 @@ export const AUDIO = {
   hardButton: "Hard mode. Full spiral paths.",
   gameStart: (mazeName: string, moveTarget: number) =>
     `${mazeName}. Find the exit in about ${moveTarget} moves. Swipe to move.`,
-  moved: (direction: string, openDirs: string[]) => {
-    if (openDirs.length === 1) {
-      return `Moved ${direction}. One way open: ${openDirs[0]}.`;
-    }
-    if (openDirs.length === 2) {
-      return `Moved ${direction}. Two exits.`;
-    }
-    return `Moved ${direction}.`;
-  },
+  moved: (direction: string) => direction,
   blocked: (direction: string) => `Wall to the ${direction}.`,
-  deadEnd: "Dead end. Only way is back.",
+  deadEnd: "Dead end.",
+  stepsLeft: (n: number) => n === 1 ? "One step to exit." : `${n} steps to exit.`,
   won: (moves: number) => `You found the exit in ${moves} moves. Excellent!`,
   nextMaze: (mazeName: string) =>
     `Well done! Next maze: ${mazeName}. Swipe to move.`,

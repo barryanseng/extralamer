@@ -15,10 +15,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AUDIO, speak, stopSpeaking } from "@/utils/audio";
 import { hapticMove, hapticWall, hapticWin } from "@/utils/haptics";
 import {
+  bfsFrom,
   bfsSolve,
   canMove,
   getHintDirection,
-  getOpenDirections,
   getMazesByDifficulty,
   isAtExit,
   isCulDeSac,
@@ -152,14 +152,12 @@ export default function GameScreen() {
 
         if (isAtExit(next, maze.exit)) {
           showOverlay(direction.toUpperCase());
-          speak(`Moved ${direction}.`, true);
+          speak(direction, true);
           setTimeout(() => handleWin(newMoveCount), 200);
           return;
         }
 
-        const openDirs = getOpenDirections(maze, next);
-        const audioMsg = AUDIO.moved(direction, openDirs);
-        speak(audioMsg, true);
+        speak(AUDIO.moved(direction), true);
 
         if (isCulDeSac(maze, next)) {
           showOverlay("Dead End");
@@ -170,6 +168,14 @@ export default function GameScreen() {
         }
 
         movesSinceHintRef.current += 1;
+
+        if (newMoveCount % 5 === 0) {
+          const stepsLeft = bfsFrom(maze, next);
+          if (stepsLeft !== null) {
+            speak(AUDIO.stepsLeft(stepsLeft));
+          }
+        }
+
         if (movesSinceHintRef.current >= 20) {
           movesSinceHintRef.current = 0;
           const hintDir = getHintDirection(maze, next);

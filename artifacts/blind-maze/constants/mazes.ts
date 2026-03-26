@@ -182,6 +182,38 @@ export function isCulDeSac(
   return getOpenDirections(maze, pos).length === 1;
 }
 
+export function bfsFrom(maze: MazeData, from: Cell): number | null {
+  if (isAtExit(from, maze.exit)) return 0;
+
+  const { rows, cols } = maze;
+  const visited: boolean[][] = Array.from({ length: rows }, () =>
+    Array<boolean>(cols).fill(false)
+  );
+  const queue: Array<{ cell: Cell; moves: number }> = [{ cell: from, moves: 0 }];
+  visited[from.row][from.col] = true;
+
+  const directions: Array<"up" | "down" | "left" | "right"> = [
+    "up", "down", "left", "right",
+  ];
+
+  while (queue.length > 0) {
+    const { cell, moves } = queue.shift()!;
+    if (isAtExit(cell, maze.exit)) return moves;
+
+    for (const dir of directions) {
+      if (canMove(maze, cell, dir)) {
+        const next = movePlayer(cell, dir);
+        if (!visited[next.row][next.col]) {
+          visited[next.row][next.col] = true;
+          queue.push({ cell: next, moves: moves + 1 });
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function getHintDirection(
   maze: MazeData,
   from: Cell

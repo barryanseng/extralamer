@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── blind-maze/         # Expo mobile app — audio-first maze game for blind users
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -90,6 +91,24 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 ### `lib/api-client-react` (`@workspace/api-client-react`)
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
+
+### `artifacts/blind-maze` (`@workspace/blind-maze`)
+
+Expo React Native mobile app — audio-first maze game for blind and visually impaired users.
+
+- **Fully dark screen** — pure black UI throughout
+- **Audio guidance** — `expo-speech` reads all instructions, directions, wall collisions, and win conditions
+- **Swipe gestures** — `PanResponder` detects up/down/left/right swipes anywhere on screen
+- **Haptic feedback** — `expo-haptics` for wall hits (heavy impact), moves (light impact), and wins (notification)
+- **Bottom-right exit gesture** — hold bottom-right corner for 1 second to return to menu
+- **10 unique mazes** — Easy (4 maps, 4-6 moves), Medium (3 maps, 9-11 moves), Hard (3 maps, 14-18 moves)
+- **Brief visual overlays** — text appears and fades quickly for each action
+- Key files:
+  - `app/index.tsx` — main menu with difficulty selection (EASY/MEDIUM/HARD)
+  - `app/game.tsx` — game screen with gesture handling, audio, haptics
+  - `constants/mazes.ts` — 10 hand-crafted maze definitions + movement logic
+  - `utils/audio.ts` — queued speech synthesis wrapper
+  - `utils/haptics.ts` — haptic feedback helpers
 
 ### `scripts` (`@workspace/scripts`)
 

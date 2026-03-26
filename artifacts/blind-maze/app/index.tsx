@@ -1,111 +1,66 @@
 import { router } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Platform,
+  Easing,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AUDIO, speak, stopSpeaking } from "@/utils/audio";
 import { hapticSelect } from "@/utils/haptics";
 
 type Difficulty = "easy" | "medium" | "hard";
 
-function DifficultyButton({
-  label,
-  audioLabel,
-  difficulty,
-  onSelect,
-}: {
-  label: string;
-  audioLabel: string;
-  difficulty: Difficulty;
-  onSelect: (d: Difficulty) => void;
-}) {
-  const pressAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePress = () => {
-    hapticSelect();
-    onSelect(difficulty);
-  };
-
-  const handlePressIn = () => {
-    speak(audioLabel, true);
-    Animated.spring(pressAnim, {
-      toValue: 0.95,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(pressAnim, {
-      toValue: 1,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const borderColor =
-    difficulty === "easy"
-      ? "#2ECC71"
-      : difficulty === "medium"
-      ? "#F39C12"
-      : "#E74C3C";
-
-  const glowColor =
-    difficulty === "easy"
-      ? "rgba(46,204,113,0.12)"
-      : difficulty === "medium"
-      ? "rgba(243,156,18,0.12)"
-      : "rgba(231,76,60,0.12)";
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      accessibilityLabel={audioLabel}
-      accessibilityRole="button"
-      testID={`difficulty-${difficulty}`}
-      style={{ width: "100%" }}
-    >
-      <Animated.View
-        style={[
-          styles.difficultyBtn,
-          {
-            borderColor,
-            backgroundColor: glowColor,
-            transform: [{ scale: pressAnim }],
-          },
-        ]}
-      >
-        <Text style={[styles.difficultyLabel, { color: borderColor }]}>
-          {label}
-        </Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 export default function MenuScreen() {
-  const insets = useSafeAreaInsets();
-  const hasSpoken = useRef(false);
+  const instructionOpacity = useRef(new Animated.Value(0)).current;
+  const hasInteracted = useRef(false);
+  const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const selectedOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!hasSpoken.current) {
-      hasSpoken.current = true;
-      const timeout = setTimeout(() => {
-        speak(AUDIO.welcome);
-      }, 600);
-      return () => clearTimeout(timeout);
-    }
+    Animated.sequence([
+      Animated.timing(instructionOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: false,
+        easing: Easing.out(Easing.ease),
+      }),
+      Animated.delay(2800),
+      Animated.timing(instructionOpacity, {
+        toValue: 0,
+        duration: 900,
+        useNativeDriver: false,
+        easing: Easing.in(Easing.ease),
+      }),
+    ]).start();
   }, []);
 
+  function flashLabel(label: string) {
+    setSelectedLabel(label);
+    selectedOpacity.setValue(1);
+    Animated.timing(selectedOpacity, {
+      toValue: 0,
+      duration: 800,
+      delay: 600,
+      useNativeDriver: false,
+      easing: Easing.in(Easing.ease),
+    }).start();
+  }
+
   const handleSelect = async (difficulty: Difficulty) => {
+    if (!hasInteracted.current) {
+      hasInteracted.current = true;
+    }
+    await hapticSelect();
     await stopSpeaking();
+
+    const label =
+      difficulty === "easy" ? "EASY" : difficulty === "medium" ? "MEDIUM" : "HARD";
+    flashLabel(label);
+
     if (difficulty === "easy") speak(AUDIO.easySelected, true);
     else if (difficulty === "medium") speak(AUDIO.mediumSelected, true);
     else speak(AUDIO.hardSelected, true);
@@ -115,50 +70,52 @@ export default function MenuScreen() {
     }, 900);
   };
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top + 20;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom + 20;
+  const handleFirstTouch = () => {
+    if (!hasInteracted.current) {
+      hasInteracted.current = true;
+      speak(AUDIO.welcome, true);
+    }
+  };
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          paddingTop: topPad,
-          paddingBottom: bottomPad,
-        },
-      ]}
-    >
-      <View style={{ alignItems: "center" }}>
-        <Text style={styles.title}>BLIND{"\n"}MAZE</Text>
-        <View style={styles.titleDivider} />
-        <Text style={styles.subtitle}>Audio-Guided Navigation</Text>
-      </View>
+    <View style={styles.container}>
+      <Pressable
+        style={styles.zone}
+        onPress={() => handleSelect("easy")}
+        onPressIn={handleFirstTouch}
+        accessibilityLabel="Easy difficulty"
+        accessibilityRole="button"
+      />
+      <Pressable
+        style={styles.zone}
+        onPress={() => handleSelect("medium")}
+        onPressIn={handleFirstTouch}
+        accessibilityLabel="Medium difficulty"
+        accessibilityRole="button"
+      />
+      <Pressable
+        style={styles.zone}
+        onPress={() => handleSelect("hard")}
+        onPressIn={handleFirstTouch}
+        accessibilityLabel="Hard difficulty"
+        accessibilityRole="button"
+      />
 
-      <View style={styles.buttonsContainer}>
-        <DifficultyButton
-          label="EASY"
-          audioLabel={AUDIO.easyButton}
-          difficulty="easy"
-          onSelect={handleSelect}
-        />
-        <DifficultyButton
-          label="MEDIUM"
-          audioLabel={AUDIO.mediumButton}
-          difficulty="medium"
-          onSelect={handleSelect}
-        />
-        <DifficultyButton
-          label="HARD"
-          audioLabel={AUDIO.hardButton}
-          difficulty="hard"
-          onSelect={handleSelect}
-        />
-      </View>
+      <Animated.View
+        style={[styles.overlay, { opacity: instructionOpacity, pointerEvents: "none" }]}
+      >
+        <Text style={styles.instructionTitle}>BLIND MAZE</Text>
+        <Text style={styles.instructionLine}>Tap top for Easy</Text>
+        <Text style={styles.instructionLine}>Tap middle for Medium</Text>
+        <Text style={styles.instructionLine}>Tap bottom for Hard</Text>
+        <Text style={styles.instructionSub}>Swipe to move · Hold bottom-right to return</Text>
+      </Animated.View>
 
-      <View style={{ alignItems: "center" }}>
-        <Text style={styles.hint}>Swipe anywhere to move</Text>
-        <Text style={styles.hintSub}>Hold bottom-right to return to menu</Text>
-      </View>
+      <Animated.View
+        style={[styles.overlay, { opacity: selectedOpacity, pointerEvents: "none" }]}
+      >
+        <Text style={styles.selectedLabel}>{selectedLabel}</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -167,62 +124,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000000",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 32,
+    flexDirection: "column",
   },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 52,
-    fontFamily: "Inter_700Bold",
-    textAlign: "center",
-    letterSpacing: 12,
-    lineHeight: 64,
-  },
-  titleDivider: {
-    width: 48,
-    height: 2,
-    backgroundColor: "#333",
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  subtitle: {
-    color: "#444",
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    letterSpacing: 3,
-    textTransform: "uppercase",
-  },
-  buttonsContainer: {
+  zone: {
+    flex: 1,
     width: "100%",
-    gap: 16,
   },
-  difficultyBtn: {
-    width: "100%",
-    paddingVertical: 28,
-    borderRadius: 4,
-    borderWidth: 1,
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 40,
+    pointerEvents: "none",
   },
-  difficultyLabel: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 6,
+  instructionTitle: {
+    color: "#FFFFFF",
+    fontSize: 36,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 10,
+    marginBottom: 32,
   },
-  hint: {
-    color: "#2a2a2a",
+  instructionLine: {
+    color: "#888888",
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  instructionSub: {
+    color: "#333333",
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    textAlign: "center",
     letterSpacing: 0.5,
-  },
-  hintSub: {
-    color: "#222",
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    marginTop: 24,
     textAlign: "center",
-    marginTop: 6,
-    letterSpacing: 0.3,
+  },
+  selectedLabel: {
+    color: "#FFFFFF",
+    fontSize: 42,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 10,
   },
 });

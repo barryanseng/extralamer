@@ -83,6 +83,7 @@ export default function GameScreen() {
   }
 
   const goToMenu = useCallback(async () => {
+    await hapticWin();
     await stopSpeaking();
     speak(AUDIO.returnMenu);
     router.replace("/");

@@ -182,6 +182,60 @@ export function isCulDeSac(
   return getOpenDirections(maze, pos).length === 1;
 }
 
+export function getHintDirection(
+  maze: MazeData,
+  from: Cell
+): "up" | "down" | "left" | "right" | null {
+  if (isAtExit(from, maze.exit)) return null;
+
+  const { rows, cols } = maze;
+  const visited: boolean[][] = Array.from({ length: rows }, () =>
+    Array<boolean>(cols).fill(false)
+  );
+  const parent: Map<string, { cell: Cell; dir: "up" | "down" | "left" | "right" }> =
+    new Map();
+
+  const key = (c: Cell) => `${c.row},${c.col}`;
+  const queue: Cell[] = [from];
+  visited[from.row][from.col] = true;
+
+  const directions: Array<"up" | "down" | "left" | "right"> = [
+    "up",
+    "down",
+    "left",
+    "right",
+  ];
+
+  while (queue.length > 0) {
+    const cell = queue.shift()!;
+
+    if (isAtExit(cell, maze.exit)) {
+      let cur = cell;
+      while (true) {
+        const p = parent.get(key(cur));
+        if (!p) return null;
+        if (p.cell.row === from.row && p.cell.col === from.col) {
+          return p.dir;
+        }
+        cur = p.cell;
+      }
+    }
+
+    for (const dir of directions) {
+      if (canMove(maze, cell, dir)) {
+        const next = movePlayer(cell, dir);
+        if (!visited[next.row][next.col]) {
+          visited[next.row][next.col] = true;
+          parent.set(key(next), { cell, dir });
+          queue.push(next);
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function bfsSolve(maze: MazeData): number | null {
   const { start, exit, rows, cols } = maze;
   const visited: boolean[][] = Array.from({ length: rows }, () =>

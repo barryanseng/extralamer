@@ -17,6 +17,7 @@ import { hapticMove, hapticWall, hapticWin } from "@/utils/haptics";
 import {
   bfsSolve,
   canMove,
+  getHintDirection,
   getOpenDirections,
   getMazesByDifficulty,
   isAtExit,
@@ -59,6 +60,7 @@ export default function GameScreen() {
   const mazeIndexRef = useRef(0);
   const moveCountRef = useRef(0);
   const positionRef = useRef<Cell>(mazes[0].start);
+  const movesSinceHintRef = useRef(0);
 
   useEffect(() => { wonRef.current = won; }, [won]);
   useEffect(() => { allDoneRef.current = allDone; }, [allDone]);
@@ -166,6 +168,17 @@ export default function GameScreen() {
         } else {
           showOverlay(direction.toUpperCase());
         }
+
+        movesSinceHintRef.current += 1;
+        if (movesSinceHintRef.current >= 20) {
+          movesSinceHintRef.current = 0;
+          const hintDir = getHintDirection(maze, next);
+          if (hintDir) {
+            speak(AUDIO.hintStuck);
+            speak(AUDIO.hint(hintDir));
+            showOverlay("Hint");
+          }
+        }
       } else {
         hapticWall();
         speak(AUDIO.blocked(direction), true);
@@ -243,6 +256,7 @@ export default function GameScreen() {
     const maze = mazes[mazeIndex];
     const optimalMoves = bfsSolve(maze) ?? maze.minMoves;
     const msg = AUDIO.gameStart(maze.name, optimalMoves);
+    movesSinceHintRef.current = 0;
     speak(msg, true);
     showOverlay(maze.name);
   }, [mazeIndex]);

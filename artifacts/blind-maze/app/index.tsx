@@ -36,6 +36,11 @@ export default function MenuScreen() {
         easing: Easing.in(Easing.ease),
       }),
     ]).start();
+
+    const t = setTimeout(() => {
+      speak(AUDIO.welcome);
+    }, 500);
+    return () => clearTimeout(t);
   }, []);
 
   function flashLabel(label: string) {

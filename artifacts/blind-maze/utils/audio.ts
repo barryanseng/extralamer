@@ -114,4 +114,7 @@ export const AUDIO = {
   allDone:
     "You completed all mazes in this difficulty. Return to the menu to try a harder level.",
   returnMenu: "Returning to main menu.",
+  hint: (direction: string) =>
+    `Hint: try going ${direction}.`,
+  hintStuck: "You seem stuck. Here is a hint.",
 };

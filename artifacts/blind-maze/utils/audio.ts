@@ -27,17 +27,38 @@ function processQueue() {
   });
 }
 
+let webSpeaking = false;
+const webQueue: string[] = [];
+
+function processWebQueue() {
+  if (webSpeaking || webQueue.length === 0) return;
+  if (!("speechSynthesis" in window)) return;
+  const text = webQueue.shift()!;
+  webSpeaking = true;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.95;
+  utterance.onend = () => {
+    webSpeaking = false;
+    processWebQueue();
+  };
+  utterance.onerror = () => {
+    webSpeaking = false;
+    processWebQueue();
+  };
+  window.speechSynthesis.speak(utterance);
+}
+
 export async function speak(text: string, interrupt = false) {
   if (Platform.OS === "web") {
     if ("speechSynthesis" in window) {
       if (interrupt) {
         window.speechSynthesis.cancel();
-        queue.length = 0;
+        webQueue.length = 0;
+        webSpeaking = false;
       }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      utterance.rate = 0.95;
-      window.speechSynthesis.speak(utterance);
+      webQueue.push(text);
+      processWebQueue();
     }
     return;
   }
@@ -55,6 +76,8 @@ export async function stopSpeaking() {
   if (Platform.OS === "web") {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+      webQueue.length = 0;
+      webSpeaking = false;
     }
     return;
   }
@@ -75,19 +98,17 @@ export const AUDIO = {
   gameStart: (mazeName: string, moveTarget: number) =>
     `${mazeName}. Find the exit in about ${moveTarget} moves. Swipe to move.`,
   moved: (direction: string, openDirs: string[]) => {
-    const dirStr = direction;
     if (openDirs.length === 0) {
-      return `Moved ${dirStr}. Dead end. No exits.`;
+      return `Moved ${direction}. Dead end. No exits.`;
     }
     if (openDirs.length === 1) {
-      return `Moved ${dirStr}. One way open: ${openDirs[0]}.`;
+      return `Moved ${direction}. One way open: ${openDirs[0]}.`;
     }
-    return `Moved ${dirStr}.`;
+    return `Moved ${direction}.`;
   },
   blocked: (direction: string) => `Wall to the ${direction}.`,
   deadEnd: "Dead end. Blocked on all sides.",
-  won: (moves: number) =>
-    `You found the exit in ${moves} moves. Excellent!`,
+  won: (moves: number) => `You found the exit in ${moves} moves. Excellent!`,
   nextMaze: (mazeName: string) =>
     `Well done! Next maze: ${mazeName}. Swipe to move.`,
   allDone:

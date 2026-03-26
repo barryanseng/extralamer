@@ -13,6 +13,18 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { MAZES, bfsSolve } from "@/constants/mazes";
+
+(function assertMazeSolvability() {
+  for (const maze of MAZES) {
+    const shortest = bfsSolve(maze);
+    if (shortest === null || shortest > 20) {
+      throw new Error(
+        `Maze "${maze.id}" fails BFS validation: shortest=${shortest}. All mazes must be solvable in <=20 moves.`
+      );
+    }
+  }
+})();
 
 SplashScreen.preventAutoHideAsync();
 

@@ -20,7 +20,7 @@ import {
   getOpenDirections,
   getMazesByDifficulty,
   isAtExit,
-  isDeadEnd,
+  isCulDeSac,
   MazeData,
   movePlayer,
   type Cell,
@@ -158,7 +158,7 @@ export default function GameScreen() {
         const audioMsg = AUDIO.moved(direction, openDirs);
         speak(audioMsg, true);
 
-        if (isDeadEnd(maze, next)) {
+        if (isCulDeSac(maze, next)) {
           showOverlay("Dead End");
           hapticWall();
           speak(AUDIO.deadEnd);

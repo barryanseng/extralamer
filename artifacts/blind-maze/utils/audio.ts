@@ -10,7 +10,7 @@ function processQueue() {
   isSpeaking = true;
   Speech.speak(text, {
     language: "en-US",
-    rate: 0.95,
+    rate: 1.2,
     pitch: 1.0,
     onDone: () => {
       isSpeaking = false;
@@ -37,7 +37,7 @@ function processWebQueue() {
   webSpeaking = true;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
-  utterance.rate = 0.95;
+  utterance.rate = 1.2;
   utterance.onend = () => {
     webSpeaking = false;
     processWebQueue();
@@ -88,7 +88,7 @@ export async function stopSpeaking() {
 
 export const AUDIO = {
   welcome:
-    "Welcome to Wayfinder. Navigate an invisible maze using only touch and sound. Swipe up, down, left, or right to move through the maze and find the exit. Hold the bottom right corner for one second to return to this menu at any time. Choose your difficulty: tap the top of the screen for Easy, the middle for Medium, or the bottom for Hard.",
+    "Wayfinder. Solve an invisible maze by swiping to move. Find the exit. Hold bottom-right to return to menu. Tap top for Easy, middle for Medium, bottom for Hard.",
   easySelected: "Easy selected. Four mazes, short paths.",
   mediumSelected: "Medium selected. Three mazes, moderate paths.",
   hardSelected: "Hard selected. Three mazes, longer paths.",

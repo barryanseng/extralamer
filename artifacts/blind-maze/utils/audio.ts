@@ -88,7 +88,7 @@ export async function stopSpeaking() {
 
 export const AUDIO = {
   welcome:
-    "Welcome to Wayfinder. A game designed for all abilities. Swipe up, down, left, or right anywhere on the screen to move. To return to the main menu at any time, hold the bottom right corner of the screen for one second. Three difficulties are available. Tap the top of the screen for Easy. Tap the middle for Medium. Tap the bottom for Hard.",
+    "Welcome to Wayfinder. Navigate an invisible maze using only touch and sound. Swipe up, down, left, or right to move through the maze and find the exit. Hold the bottom right corner for one second to return to this menu at any time. Choose your difficulty: tap the top of the screen for Easy, the middle for Medium, or the bottom for Hard.",
   easySelected: "Easy selected. Four mazes, short paths.",
   mediumSelected: "Medium selected. Three mazes, moderate paths.",
   hardSelected: "Hard selected. Three mazes, longer paths.",

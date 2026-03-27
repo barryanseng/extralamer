@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AUDIO, playBell, speak, stopSpeaking } from "@/utils/audio";
+import { AUDIO, playBell, speak, stopSpeaking, unlockAudio } from "@/utils/audio";
 import { hapticMove, hapticWall, hapticWin } from "@/utils/haptics";
 import {
   bfsFrom,
@@ -135,6 +135,7 @@ export default function GameScreen() {
 
   const handleMove = useCallback(
     (direction: Direction) => {
+      unlockAudio();
       if (wonRef.current || allDoneRef.current) return;
 
       const maze = mazes[mazeIndexRef.current];

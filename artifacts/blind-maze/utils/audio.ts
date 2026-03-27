@@ -4,26 +4,52 @@ import { Platform } from "react-native";
 
 let bellPlayer: ReturnType<typeof createAudioPlayer> | null = null;
 
+// Shared AudioContext reused across calls so the browser never suspends it unexpectedly.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let webAudioCtx: any = null;
+
+function getWebAudioCtx() {
+  if (typeof window === "undefined") return null;
+  // @ts-ignore
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!webAudioCtx) webAudioCtx = new AudioCtx();
+  return webAudioCtx;
+}
+
+// Call this on every user gesture so the context is always in "running" state.
+export function unlockAudio() {
+  const ctx = getWebAudioCtx();
+  if (ctx && ctx.state === "suspended") ctx.resume();
+}
+
+function ringBell(ctx: any) {
+  const freqs = [523.25, 1046.5, 1568.0];
+  const amps  = [0.55,   0.25,   0.12];
+  const now = ctx.currentTime;
+  freqs.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(amps[i], now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 1.8);
+  });
+}
+
 export function playBell() {
   if (Platform.OS === "web") {
-    if (typeof window === "undefined" || !("AudioContext" in window || "webkitAudioContext" in window)) return;
-    // @ts-ignore
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioCtx();
-    const freqs = [523.25, 1046.5, 1568.0];
-    const amps  = [0.55,   0.25,   0.12];
-    freqs.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(amps[i], ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.8);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 1.8);
-    });
+    const ctx = getWebAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().then(() => ringBell(ctx));
+    } else {
+      ringBell(ctx);
+    }
     return;
   }
   try {
@@ -45,7 +71,7 @@ function processQueue() {
   isSpeaking = true;
   Speech.speak(text, {
     language: "en-US",
-    rate: 1.2,
+    rate: 1.0,
     pitch: 1.0,
     onDone: () => {
       isSpeaking = false;
@@ -72,7 +98,7 @@ function processWebQueue() {
   webSpeaking = true;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
-  utterance.rate = 1.2;
+  utterance.rate = 1.0;
   utterance.onend = () => {
     webSpeaking = false;
     processWebQueue();

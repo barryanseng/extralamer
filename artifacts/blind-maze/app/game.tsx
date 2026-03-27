@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AUDIO, speak, stopSpeaking } from "@/utils/audio";
+import { AUDIO, playBell, speak, stopSpeaking } from "@/utils/audio";
 import { hapticMove, hapticWall, hapticWin } from "@/utils/haptics";
 import {
   bfsFrom,
@@ -103,6 +103,7 @@ export default function GameScreen() {
       wonRef.current = true;
       setWon(true);
       await hapticWin();
+      playBell();
       speak(AUDIO.won(moves), true);
       showOverlay("Exit Found!");
 

@@ -1,5 +1,40 @@
 import * as Speech from "expo-speech";
+import { createAudioPlayer } from "expo-audio";
 import { Platform } from "react-native";
+
+let bellPlayer: ReturnType<typeof createAudioPlayer> | null = null;
+
+export function playBell() {
+  if (Platform.OS === "web") {
+    if (typeof window === "undefined" || !("AudioContext" in window || "webkitAudioContext" in window)) return;
+    // @ts-ignore
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const freqs = [523.25, 1046.5, 1568.0];
+    const amps  = [0.55,   0.25,   0.12];
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(amps[i], ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 1.8);
+    });
+    return;
+  }
+  try {
+    if (!bellPlayer) {
+      bellPlayer = createAudioPlayer(require("../assets/sounds/bell.wav"));
+    }
+    bellPlayer.seekTo(0);
+    bellPlayer.play();
+  } catch {
+  }
+}
 
 let isSpeaking = false;
 const queue: string[] = [];
